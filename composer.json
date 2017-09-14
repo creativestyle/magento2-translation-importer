@@ -8,5 +8,8 @@
         }
     ],
     "license": "MIT",
-    "require": {}
+    "require": {
+        "creativestyle/csv-merger": "^1.0",
+        "creativestyle/google-sheets-downloader": "dev-develop"
+    }
 }

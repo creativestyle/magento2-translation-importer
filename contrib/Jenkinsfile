@@ -1,0 +1,42 @@
+/**
+ * Pipeline params:
+ * ================
+ * GIT_CREDENTIALS_ID / Credentials Parameter / Credentials for git repository
+ * GOOGLE_CLIENT_ID / Text / Google API client ID
+ * GOOGLE_CLIENT_SECRET / Text / Google API client secret
+ * SPREADSHEET_ID / Text / Spreadsheet ID
+ * GOOGLE_ACCESS_TOKEN / Text / Google API access token
+ * GOOGLE_REFRESH_TOKEN / Text / Google API refresh token
+ * LANGUAGE_PACKAGE_REPOSITORY_URL / Text / URL of language package git repository
+ * LANGUAGE_PACKAGE_REPOSITORY_BRANCH / Text / Language package repository branch
+ * LANGUAGE / Text / Language ISO code
+ * SOURCE_PREFERENCE / Select [right|left] / Preference of the translation source when the wording
+ *                                           is already translated in the git repository,
+ *                                           left (default, if not provided) = keep the translation from repository,
+ *                                           right = take Google Docs translation and update it in the repository
+ */
+
+node {
+    stage('Install & setup import app') {
+        cleanWs()
+        sh '''php /usr/local/bin/composer require creativestyle/magento2-translation-importer
+bin/configure-google-sheet.sh google_client_id $GOOGLE_CLIENT_ID
+bin/configure-google-sheet.sh google_client_secret $GOOGLE_CLIENT_SECRET
+bin/configure-google-sheet.sh spreadsheet_id $SPREADSHEET_ID
+bin/configure-google-sheet.sh google_access_token $GOOGLE_ACCESS_TOKEN
+bin/configure-google-sheet.sh google_refresh_token $GOOGLE_REFRESH_TOKEN
+'''
+    }
+    stage('Clone language package repository') {
+        checkout([$class: 'GitSCM', branches: [[name: '*/' + LANGUAGE_PACKAGE_REPOSITORY_BRANCH]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'tmp/language_package']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: GIT_CREDENTIALS_ID, url: LANGUAGE_PACKAGE_REPOSITORY_URL]]])
+    }
+    stage('Merge translation dictionaries') {
+        sh 'bin/merge.sh $LANGUAGE tmp/language_package "" $SOURCE_PREFERENCE'
+    }
+    stage('Commit & push changes to repository') {
+        sh '''cd ${WORKSPACE}/tmp/language_package
+git add .
+git commit -m "Update wordings - `date +'%d-%m-%Y %H:%M'`" && git push origin HEAD:${LANGUAGE_PACKAGE_REPOSITORY_BRANCH} || exit 0
+'''
+    }
+}
