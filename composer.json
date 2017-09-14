@@ -1,0 +1,12 @@
+{
+    "name": "creativestyle/magento2-translation-importer",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Marek Zabrowarny",
+            "email": "marek.zabrowarny@creativestyle.pl"
+        }
+    ],
+    "license": "MIT",
+    "require": {}
+}
